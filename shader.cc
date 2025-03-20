@@ -52,6 +52,16 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
+// Task 4
+#define FULL_MASK 0xFFFFFFFF  // All threads in the warp are active
+unsigned long long total_global_mem_accesses = 0;
+unsigned long long total_local_mem_accesses = 0;
+// Global Counters for Branch Instructions
+unsigned long long total_branch_warps = 0;  // Warps that executed a branch
+unsigned long long divergent_branch_warps = 0;  // Warps with divergence
+// Task 4	
+
+				
 mem_fetch *shader_core_mem_fetch_allocator::alloc(
     new_addr_type addr, mem_access_type type, unsigned size, bool wr,
     unsigned long long cycle) const {
@@ -589,6 +599,10 @@ void shader_core_stats::print(FILE *fout) const {
   }
   fprintf(fout, "gpgpu_n_tot_thrd_icount = %lld\n", thread_icount_uarch);
   fprintf(fout, "gpgpu_n_tot_w_icount = %lld\n", warp_icount_uarch);
+  // NEW: Add branch divergence stats	Task 4							 
+  fprintf(fout, "Total warps executed branch instructions: %llu\n",																						
+  fprintf(fout, "Total warps with divergence: %llu\n",
+  // Task 4									  
 
   fprintf(fout, "gpgpu_n_stall_shd_mem = %d\n", gpgpu_n_stall_shd_mem);
   fprintf(fout, "gpgpu_n_mem_read_local = %d\n", gpgpu_n_mem_read_local);
@@ -600,6 +614,10 @@ void shader_core_stats::print(FILE *fout) const {
 
   fprintf(fout, "gpgpu_n_load_insn  = %d\n", gpgpu_n_load_insn);
   fprintf(fout, "gpgpu_n_store_insn = %d\n", gpgpu_n_store_insn);
+  // Task 4
+  fprintf(fout, "Total global memory accesses: %llu\n", total_global_mem_accesses);
+  fprintf(fout, "Total local memory accesses: %llu\n", total_local_mem_accesses);  
+  // Task 4							  
   fprintf(fout, "gpgpu_n_shmem_insn = %d\n", gpgpu_n_shmem_insn);
   fprintf(fout, "gpgpu_n_sstarr_insn = %d\n", gpgpu_n_sstarr_insn);
   fprintf(fout, "gpgpu_n_tex_insn = %d\n", gpgpu_n_tex_insn);
@@ -985,12 +1003,31 @@ void shader_core_ctx::fetch() {
 
 void exec_shader_core_ctx::func_exec_inst(warp_inst_t &inst) {
   execute_warp_inst_t(inst);
+  // Task 4
+  // Track branch instructions
+    if (inst.op == BRANCH_OP) {  
+        total_branch_warps++;  
+
+        if (inst.get_active_mask() != FULL_MASK) {  
+            divergent_branch_warps++;
+        }
+    }
+  // Task 4
   if (inst.is_load() || inst.is_store()) {
     inst.generate_mem_accesses();
     // inst.print_m_accessq();
+	// Task 4
+	for (unsigned i = 0; i < inst.active_count(); i++) {
+            if (inst.space.get_type() == global_space) {  
+                total_global_mem_accesses++;
+            }
+            if (inst.space.get_type() == local_space) {  
+                total_local_mem_accesses++;
+            }
+        }
+	// Task 4
   }
 }
-
 void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
                                  const warp_inst_t *next_inst,
                                  const active_mask_t &active_mask,
