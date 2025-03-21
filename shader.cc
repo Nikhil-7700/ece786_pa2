@@ -48,6 +48,9 @@
 #include "traffic_breakdown.h"
 #include "visualizer.h"
 
+extern int warp_branch_divergence_cnt;     // Task 3
+extern int mainbranch_cnt;
+
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -710,6 +713,9 @@ void shader_core_stats::print(FILE *fout) const {
 
   m_outgoing_traffic_stats->print(fout);
   m_incoming_traffic_stats->print(fout);
+
+  fprintf(fout, "# of warps excuted conditional branch instrctions and have divergence: %d\n", warp_branch_divergence_cnt);// Task 3
+  fprintf(fout, "# of warps excuted conditional branch instrctions(no matter they have divergence or not) %d\n", mainbranch_cnt);
 }
 
 void shader_core_stats::event_warp_issued(unsigned s_id, unsigned warp_id,
